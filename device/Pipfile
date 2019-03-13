@@ -9,10 +9,11 @@ flake8 = "*"
 [packages]
 flake8 = "*"
 pyserial = "*"
+pynacl = "*"
 
 [requires]
 python_version = "3.7"
 
 [scripts]
-start = "python -m appvault"
-lint = "python -m flake8 appvault"
+start = "python -m project"
+lint = "python -m flake8 project"
