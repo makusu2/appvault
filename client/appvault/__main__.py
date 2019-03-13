@@ -23,3 +23,6 @@ if __name__ == "__main__":
                 outfile_open.write(encrypted_bytes)
     else:
         print("running")
+        with open(args.infile, "rb") as infile_open:
+            encrypted_data = infile_open.read()
+            comms.request_run(encrypted_data)

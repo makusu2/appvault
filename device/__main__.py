@@ -14,7 +14,7 @@ def run_and_send(encrypted_data):
     eval_interpreter = asteval.Interpreter(writer=SERIAL_OUT,
                                            err_writer=SERIAL_ERR)
     result = eval_interpreter(decrypted_data)
-    SERIAL_RES.write(str(result))
+    SERIAL_RES.write(result.encode())
 
 
 def encrypt_and_send(program_data):
