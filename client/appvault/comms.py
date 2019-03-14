@@ -30,20 +30,23 @@ def request_run(data):
         start_line = SER.readline()
         if start_line == b"000START000out\n":
             next_line = SER.readline()
-            while next_line != b"000END000\n":
+            while not next_line.endswith(b"000END000\n"):
                 sys.stdout.write(next_line.decode())
                 next_line = SER.readline()
+            sys.stdout.write(next_line.decode().replace("000END000\n", ""))
         elif start_line == b"000START000err\n":
             next_line = SER.readline()
-            while next_line != b"000END000\n":
+            while not next_line.endswith(b"000END000\n"):
                 sys.stderr.write(next_line.decode())
                 next_line = SER.readline()
+            sys.stderr.write(next_line.decode().replace("000END000\n", ""))
         elif start_line == b"000START000res\n":
             sys.stdout.write("\nRESULT:\n")
             next_line = SER.readline()
-            while next_line != b"000END000\n":
+            while not next_line.endswith(b"000END000\n"):
                 sys.stdout.write(next_line.decode())
                 next_line = SER.readline()
+            sys.stdout.write(next_line.decode().replace("000END000\n", ""))
         elif start_line == b"":
             raise TimeoutError("Nothing received")
         else:

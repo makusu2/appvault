@@ -17,7 +17,8 @@ def run_and_send(encrypted_data):
     result = eval_interpreter(decrypted_data)
     SERIAL_RES.write(str(result).encode())
     for gateway in [SERIAL_OUT, SERIAL_ERR, SERIAL_RES]:
-        gateway.write(b"\n")
+        #gateway.write(b"\n")
+        gateway.flush()
 
 
 def encrypt_and_send(program_data):

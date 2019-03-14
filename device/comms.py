@@ -37,7 +37,7 @@ class SerialWriter:
 
     def flush(self):
         buffer_val = self.buffer.getvalue()
-        assert buffer_val.endswith(b"\n")
+        #assert buffer_val.endswith(b"\n")
         send(b"000START000" + self.identifier + b"\n" + buffer_val
              + b"000END000\n")
         self.buffer = BytesIO()
