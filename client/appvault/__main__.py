@@ -1,10 +1,12 @@
 import argparse
 from pathlib import Path
-import comms
+from .encrypt import encrypt
+from .run import run
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Interface with Appvault")
+    parser = argparse.ArgumentParser(prog="appvault",
+                                     description="Interface with Appvault")
     runmode_group = parser.add_mutually_exclusive_group()
     runmode_group.add_argument("-e", "--encrypt", action="store_true",
                                help=("Encryption mode (encrypt infile and "
@@ -24,14 +26,7 @@ if __name__ == "__main__":
         print("encrypting")
         if args.outfile is None:
             args.outfile = Path(f"{args.infile}.secure")
-        with open(args.infile, "rb") as infile_open, \
-                open(args.outfile, "wb") as outfile_open:
-            unencrypted_data = infile_open.read()
-            byte_generator = comms.request_encryption_bytes(unencrypted_data)
-            for encrypted_bytes in byte_generator:
-                outfile_open.write(encrypted_bytes)
+        encrypt(args.infile, args.outfile)
     else:
         print("running")
-        with open(args.infile, "rb") as infile_open:
-            encrypted_data = infile_open.read()
-            comms.request_run(encrypted_data)
+        run(args.infile)
