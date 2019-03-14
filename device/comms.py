@@ -3,7 +3,15 @@ import serial
 import re
 
 
-SER = serial.serial_for_url("loop://", timeout=5)  # get serial port
+def get_comport():
+    comports = list_ports.comports()
+    if not comports:
+        raise SystemError("No comports detected")
+    device = comports[0][0]
+    return serial.Serial(device)
+
+
+SER = get_comport()
 
 
 def recv_task():
