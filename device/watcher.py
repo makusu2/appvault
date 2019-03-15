@@ -30,10 +30,16 @@ def keep_checking():
     while True:
         task_bytes, task_identifier = comms.recv_task()
         if task_identifier == b"enr":
+            print("Got encryption request")
             encrypt_and_send(task_bytes)
+            print("Completed encryption request")
         elif task_identifier == b"run":
+            print("Got run request")
             run_and_send(task_bytes)
+            print("Completed run request")
+        elif task_identifier is None:
+            #print("No data received, continuing...")
+            continue
         else:
             raise ValueError(f"task_identifier {task_identifier} not "
                              "one of ['enr', 'run']")
-        time.sleep(1)
