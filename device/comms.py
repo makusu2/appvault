@@ -38,14 +38,18 @@ def recv_task():
     start_line = SER.readline()
     if not start_line:
         return None, None
-    identifier = re.match(rb"000START000(...)\n", start_line).group(1)
+    try:
+        identifier = re.match(rb"000START000(...)\n", start_line).group(1)
+    except AttributeError:
+        print(f"start_line was {start_line}")
+        raise
     next_line = SER.readline()
-    task_byte_lines = []
+    task_bytes = b""
     while not next_line.endswith(b"000END000\n"):
-        task_byte_lines.append(next_line)
+        task_bytes += next_line
         next_line = SER.readline()
-    task_byte_lines.append(next_line.replace(b"000END000\n", b""))
-    return b''.join(task_byte_lines), identifier
+    task_bytes += next_line.replace(b"000END000\n", b"")
+    return task_bytes, identifier
 
 
 def send(message: bytes):
@@ -64,7 +68,6 @@ class SerialWriter:
 
     def flush(self):
         buffer_val = self.buffer.getvalue()
-        #assert buffer_val.endswith(b"\n")
         send(b"000START000" + self.identifier + b"\n" + buffer_val
              + b"000END000\n")
         self.buffer = BytesIO()

@@ -31,22 +31,19 @@ SER = get_comport()
 
 
 def request_encryption_bytes(data):
-    def request_encryption_bytes_gen(data):
-        SER.write(b"000START000enr\n")
-        SER.write(data)
-        SER.write(b"\n000END000\n")
-        # TODO get a better way of finding start/end
+    encrypted_bytes = b""
+    SER.write(b"000START000enr\n")
+    SER.write(data)
+    SER.write(b"\n000END000\n")
+    # TODO get a better way of finding start/end
+    next_line = SER.readline()
+    assert next_line == b"000START000enc\n", f"got {next_line}"
+    next_line = SER.readline()
+    while not next_line.endswith(b"000END000\n"):
+        encrypted_bytes += next_line
         next_line = SER.readline()
-        assert next_line == b"000START000enc\n", f"got {next_line}"
-        encrypted_bytes = next_line = SER.readline()
-        while not next_line.endswith(b"000END000\n"):
-            yield next_line
-            #encrypted_bytes += next_line
-            next_line = SER.readline()
-        #print("Encrypted bytes: ",encrypted_bytes)
-        #return encrypted_bytes + next_line.replace(b"000END000\n", b"")
-        yield next_line.replace(b"000END000\n", b"")
-    return b''.join(request_encryption_bytes_gen(data))
+    encrypted_bytes += next_line.replace(b"000END000\n", b"")
+    return encrypted_bytes
 
 
 def request_run(data):
