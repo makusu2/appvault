@@ -5,6 +5,16 @@ from serial.tools import list_ports
 
 
 def get_selection(choices, query):
+    """Request user input to choose from a collection of choices.
+    If len(choices) == 1, the single choice is returned.
+
+    Parameters
+    ----------
+    choices: Iterable[:class:`str`]
+        An iterable of the choices from which the user must pick.
+    query: :class:`str`
+        The prompt displayed to the user. Defaults to "Please select one."
+    """
     choices_lower = [choice.lower() for choice in choices]
     print(f"{query}\n{choices}")
     response = input()
@@ -16,6 +26,14 @@ def get_selection(choices, query):
 
 
 def get_comport():
+    """Returns a comport after querying the user on which to use.
+    If only one valid comport exists, it is returned without alerting the user.
+
+    Raises
+    -------
+    SystemError
+        No valid comports were detected, so none could be chosen.
+    """
     comports = list_ports.comports()
     if not comports:
         raise SystemError("No comports detected")
@@ -52,10 +70,6 @@ def recv_task():
     return task_bytes, identifier
 
 
-def send(message: bytes):
-    SER.write(message)
-
-
 class SerialWriter:
     def __init__(self, identifier):
         self.buffer = BytesIO()
@@ -68,8 +82,8 @@ class SerialWriter:
 
     def flush(self):
         buffer_val = self.buffer.getvalue()
-        send(b"000START000" + self.identifier + b"\n" + buffer_val
-             + b"000END000\n")
+        SER.write(b"000START000" + self.identifier + b"\n" + buffer_val
+                  + b"000END000\n")
         self.buffer = BytesIO()
 
 

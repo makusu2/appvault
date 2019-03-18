@@ -18,4 +18,4 @@ __copyright__ = 'None'
 __version__ = '0.0.0'
 
 
-from .watcher import keep_checking
+from .watcher import Watcher

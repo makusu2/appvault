@@ -74,6 +74,12 @@ class Communicator:
         data: :class:`bytes`
             The data to be encrypted.
 
+        Raises
+        -------
+        TimeoutError
+            More data was expected in response from the device but not
+            received in time.
+
         Returns
         --------
         :class:`bytes`
@@ -85,6 +91,8 @@ class Communicator:
         self.port.write(b"\n000END000\n")
         # TODO get a better way of finding start/end
         next_line = self.port.readline()
+        if next_line == b"":
+            raise TimeoutError("Nothing received")
         assert next_line == b"000START000enc\n", f"got {next_line}"
         next_line = self.port.readline()
         while not next_line.endswith(b"000END000\n"):

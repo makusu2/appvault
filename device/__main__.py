@@ -1,5 +1,5 @@
-from .watcher import keep_checking
+from .watcher import Watcher
 
 
 if __name__ == "__main__":
-    keep_checking()
+    Watcher().keep_checking()
