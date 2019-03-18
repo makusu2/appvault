@@ -1,10 +1,19 @@
+"""
+Main function for appvault module.
+For help, run this module with the -h parameter.
+"""
+
+
 import argparse
 from pathlib import Path
 from .encrypt import encrypt
 from .run import run
 
 
-if __name__ == "__main__":
+def main():
+    """Run the appvault client module.
+    For help, run this module with the -h parameter.
+    """
     parser = argparse.ArgumentParser(prog="appvault",
                                      description="Interface with Appvault")
     runmode_group = parser.add_mutually_exclusive_group()
@@ -30,3 +39,7 @@ if __name__ == "__main__":
     else:
         print("running")
         run(args.infile)
+
+
+if __name__ == "__main__":
+    main()
