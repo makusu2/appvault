@@ -1,3 +1,8 @@
+"""
+Main function for appvault device.
+"""
+
+
 from .watcher import Watcher
 
 

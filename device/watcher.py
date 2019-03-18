@@ -5,41 +5,48 @@ Spinning cursor: https://stackoverflow.com/questions/4995733/
 
 
 import sys
+import itertools
 import nacl.secret
 import nacl.utils
 import asteval
-from . import comms
-from .comms import SERIAL_OUT, SERIAL_ERR, SERIAL_RES
-import itertools
+from .communicator import Communicator, SerialWriter
 
 
-spinner = itertools.cycle("-/|\\")
+SPINNER = itertools.cycle("-/|\\")
 
 
 class Watcher:
     def __init__(self, key=b'0'*32):
         self.box = nacl.secret.SecretBox(key)
+        self.comms = Communicator()
+        self.serial_out = SerialWriter(self.comms, b"out")
+        self.serial_err = SerialWriter(self.comms, b"err")
+        self.serial_res = SerialWriter(self.comms, b"res")
 
     def run_and_send(self, encrypted_data):
+        """Runs encrypted data and prints results to serial out/err/res."""
         decrypted_data = self.box.decrypt(encrypted_data)
-        eval_interpreter = asteval.Interpreter(writer=SERIAL_OUT,
-                                               err_writer=SERIAL_ERR)
+        eval_interpreter = asteval.Interpreter(writer=self.serial_out,
+                                               err_writer=self.serial_err)
         result = eval_interpreter(decrypted_data)
-        SERIAL_RES.write(str(result).encode())
-        for gateway in [SERIAL_OUT, SERIAL_ERR, SERIAL_RES]:
+        self.serial_res.write(str(result).encode())
+        for gateway in [self.serial_out, self.serial_err, self.serial_res]:
             gateway.flush()
 
 
     def encrypt_and_send(self, program_data):
+        """Encrypts data and sends encrypted result over comms."""
         encrypted_data = self.box.encrypt(program_data)
-        comms.SER.write(b"000START000enc\n" + encrypted_data + b"000END000\n")
+        self.comms.port.write(b"000START000enc\n" + encrypted_data
+                              + b"000END000\n")
 
 
     def keep_checking(self):
-        sys.stdout.write(next(spinner))
+        """Keep checking for new data and act accordingly."""
+        sys.stdout.write(next(SPINNER))
         sys.stdout.flush()
         while True:
-            task_bytes, task_identifier = comms.recv_task()
+            task_bytes, task_identifier = self.comms.recv_task()
             if task_identifier == b"enr":
                 sys.stdout.write("\b")
                 print("Got encryption request")
@@ -51,7 +58,7 @@ class Watcher:
                 self.run_and_send(task_bytes)
                 print("Completed run request")
             elif task_identifier is None:
-                sys.stdout.write(f"\b{next(spinner)}")
+                sys.stdout.write(f"\b{next(SPINNER)}")
                 sys.stdout.flush()
                 continue
             else:

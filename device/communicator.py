@@ -1,6 +1,6 @@
 from io import BytesIO
-import serial
 import re
+import serial
 from serial.tools import list_ports
 
 
@@ -37,7 +37,7 @@ def get_comport():
     comports = list_ports.comports()
     if not comports:
         raise SystemError("No comports detected")
-    elif len(comports) > 1:
+    if len(comports) > 1:
         chosen_port = get_selection([comport[0] for comport in comports],
                                     ("Multiple comports detected; please "
                                      "enter comport to use."))
@@ -46,47 +46,65 @@ def get_comport():
     return serial.Serial(chosen_port, timeout=1)
 
 
-print("Getting comport...")
-SER = get_comport()
-print("Got comport")
+class Communicator:
+    """Represents a serial channel for external communications.
+
+    Attributes
+    -----------
+    port: :class:`Serial`
+        The serial port over which to communicate.
+
+    """
+    def __init__(self, port=None):
+        self.port = port or get_comport()
 
 
-def recv_task():
-    """Returns a tuple of (task_bytes, identifier)"""
-    start_line = SER.readline()
-    if not start_line:
-        return None, None
-    try:
-        identifier = re.match(rb"000START000(...)\n", start_line).group(1)
-    except AttributeError:
-        print(f"start_line was {start_line}")
-        raise
-    next_line = SER.readline()
-    task_bytes = b""
-    while not next_line.endswith(b"000END000\n"):
-        task_bytes += next_line
-        next_line = SER.readline()
-    task_bytes += next_line.replace(b"000END000\n", b"")
-    return task_bytes, identifier
+    def recv_task(self):
+        """Returns a tuple of (task_bytes, identifier)"""
+        start_line = self.port.readline()
+        if not start_line:
+            return None, None
+        try:
+            identifier = re.match(rb"000START000(...)\n", start_line).group(1)
+        except AttributeError:
+            print(f"start_line was {start_line}")
+            raise
+        next_line = self.port.readline()
+        task_bytes = b""
+        while not next_line.endswith(b"000END000\n"):
+            task_bytes += next_line
+            next_line = self.port.readline()
+        task_bytes += next_line.replace(b"000END000\n", b"")
+        return task_bytes, identifier
 
 
 class SerialWriter:
-    def __init__(self, identifier):
+    """Represents the serial capture writers for stdout, stderr, and result
+
+    Attributes
+    -----------
+    comms: :class:`Communicator`
+        The serial communicator for data transmissions
+    buffer: :class:`BytesIO`
+        The buffer in which written bytes are stored until flush.
+        This is remade after each flush so do not save it in a variable.
+    identifier: :class:`str`
+        The identifier for the data. Should be one of ['out', 'err', 'res'].
+    """
+    def __init__(self, comms, identifier):
+        self.comms = comms
         self.buffer = BytesIO()
         self.identifier = identifier
 
     def write(self, msg):
+        """Write capture method. Adds to current buffer."""
         if isinstance(msg, str):
             msg = msg.encode()
         self.buffer.write(msg)
 
     def flush(self):
+        """Sends stored data and remakes buffer."""
         buffer_val = self.buffer.getvalue()
-        SER.write(b"000START000" + self.identifier + b"\n" + buffer_val
-                  + b"000END000\n")
+        self.comms.port.write(b"000START000" + self.identifier + b"\n"
+                              + buffer_val + b"000END000\n")
         self.buffer = BytesIO()
-
-
-SERIAL_OUT = SerialWriter(b"out")
-SERIAL_ERR = SerialWriter(b"err")
-SERIAL_RES = SerialWriter(b"res")
