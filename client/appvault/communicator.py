@@ -15,7 +15,7 @@ import serial
 from serial.tools import list_ports
 
 
-def id_and_bytes_as_packet(id, text):
+def as_packet(id, text):
     if isinstance(id, str):
         id = id.encode()
     if isinstance(text, str):
@@ -77,10 +77,17 @@ def get_comport():
     comports = list_ports.comports()
     if not comports:
         raise SystemError("No comports detected")
-    chosen_port = get_selection([comport[0] for comport in comports],
-                                ("Multiple comports detected; please "
-                                 "enter comport to use."))
-    return serial.Serial(chosen_port, timeout=1)
+    if len(comports) > 1:
+        chosen_port = get_selection([comport[0] for comport in comports],
+                                    ("Multiple comports detected; please "
+                                     "enter comport to use."))
+    else:
+        chosen_port = comports[0][0]
+    try:
+        return serial.Serial(chosen_port, timeout=1, exclusive=True)
+    except serial.serialutil.SerialException:
+        print("Error: Could not open port. Maybe it's already in use?")
+        return get_comport()
 
 
 class Communicator:
@@ -115,7 +122,7 @@ class Communicator:
         :class:`bytes`
             The encrypted version of the input bytes.
         """
-        self.port.write(id_and_bytes_as_packet(b"enr", data))
+        self.port.write(as_packet(b"enr", data))
         identifier, encrypted_bytes = read_id_and_bytes(self.port)
         assert identifier == b"enc", f"Identifier was {identifier}"
         return encrypted_bytes
@@ -143,7 +150,7 @@ class Communicator:
             The result of the executed program in bytes.
             Cast to bytes is performed by executing str(return_val).encode()
         """
-        self.port.write(id_and_bytes_as_packet(b"run", data))
+        self.port.write(as_packet(b"run", data))
         while True:
             identifier, output_bytes = read_id_and_bytes(self.port)
             if identifier == b"out":

@@ -10,7 +10,7 @@ import nacl.secret
 import nacl.utils
 import asteval
 from .communicator import (Communicator, SerialWriter,
-                           id_and_bytes_as_packet, read_id_and_bytes)
+                           as_packet, read_id_and_bytes)
 
 
 SPINNER = itertools.cycle("-/|\\")
@@ -37,7 +37,7 @@ class Watcher:
     def encrypt_and_send(self, program_data):
         """Encrypts data and sends encrypted result over comms."""
         encrypted_data = self.box.encrypt(program_data)
-        self.comms.port.write(id_and_bytes_as_packet(b"enc", encrypted_data))
+        self.comms.port.write(as_packet(b"enc", encrypted_data))
 
     def keep_checking(self):
         """Keep checking for new data and act accordingly."""

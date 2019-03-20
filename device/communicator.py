@@ -10,7 +10,7 @@ ETX = b'\x03'
 EOT = b'\x04'
 
 
-def id_and_bytes_as_packet(id, text):
+def as_packet(id, text):
     if isinstance(id, str):
         id = id.encode()
     if isinstance(text, str):
@@ -37,7 +37,7 @@ def read_id_and_bytes(port):
 
 
 
-#print(b"\n\n\n"+id_and_bytes_as_packet("enr", "Helo there General Kenobi")+b"\n\n\n")
+#print(b"\n\n\n"+as_packet("enr", "Helo there General Kenobi")+b"\n\n\n")
 
 
 def get_selection(choices, query):
@@ -79,7 +79,11 @@ def get_comport():
                                      "enter comport to use."))
     else:
         chosen_port = comports[0][0]
-    return serial.Serial(chosen_port, timeout=1)
+    try:
+        return serial.Serial(chosen_port, timeout=1, exclusive=True)
+    except serial.serialutil.SerialException:
+        print("Error: Could not open port. Maybe it's already in use?")
+        return get_comport()
 
 
 class Communicator:
@@ -126,9 +130,5 @@ class SerialWriter:
     def flush(self):
         """Sends stored data and remakes buffer."""
         buffer_val = self.buffer.getvalue()
-        self.comms.port.write(id_and_bytes_as_packet(self.identifier, buffer_val))
-        # size = len(buffer_val)
-        # size_as_bytes = bytes([255]*(size//255) + [size % 255] + [0])
-        # self.comms.port.write(SOH + self.identifier + size_as_bytes
-        #                       + buffer_val + ETX + EOT)
+        self.comms.port.write(as_packet(self.identifier, buffer_val))
         self.buffer = BytesIO()
