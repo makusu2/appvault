@@ -3,6 +3,42 @@ import re
 import serial
 from serial.tools import list_ports
 
+#TODO open serial port instead of just using
+SOH = b'\x01'
+STX = b'\x02'
+ETX = b'\x03'
+EOT = b'\x04'
+
+
+def id_and_bytes_as_packet(id, text):
+    if isinstance(id, str):
+        id = id.encode()
+    if isinstance(text, str):
+        text = text.encode()
+    assert len(id) == 3, f"ID: {id}"
+    size = len(text)
+    size_as_bytes = bytes([255]*(size//255) + [size % 255] + [0])
+    return SOH + id + size_as_bytes + text + ETX + EOT
+
+def read_id_and_bytes(port):
+    soh_bytes = port.read()
+    if not soh_bytes:
+        return None, None
+    assert soh_bytes == SOH, f"soh_bytes: {soh_bytes}"
+    identifier = port.read_until(size=3)
+    transmission_size = sum(port.read_until(bytes([0])))
+    task_bytes = port.read_until(size=transmission_size)
+    etx_bytes = port.read()
+    assert etx_bytes == ETX, f"Expected {ETX}: {etx_bytes}"
+    eot_bytes = port.read()
+    assert eot_bytes == EOT, f"Expected {EOT}: {eot_bytes}"
+    return identifier, task_bytes
+
+
+
+
+#print(b"\n\n\n"+id_and_bytes_as_packet("enr", "Helo there General Kenobi")+b"\n\n\n")
+
 
 def get_selection(choices, query):
     """Request user input to choose from a collection of choices.
@@ -59,22 +95,8 @@ class Communicator:
         self.port = port or get_comport()
 
     def recv_task(self):
-        """Returns a tuple of (task_bytes, identifier)"""
-        start_line = self.port.readline()
-        if not start_line:
-            return None, None
-        try:
-            identifier = re.match(rb"000START000(...)\n", start_line).group(1)
-        except AttributeError:
-            print(f"start_line was {start_line}")
-            raise
-        next_line = self.port.readline()
-        task_bytes = b""
-        while not next_line.endswith(b"000END000\n"):
-            task_bytes += next_line
-            next_line = self.port.readline()
-        task_bytes += next_line.replace(b"000END000\n", b"")
-        return task_bytes, identifier
+        """Returns a tuple of (identifier, task_bytes)"""
+        return read_id_and_bytes(self.port)
 
 
 class SerialWriter:
@@ -104,6 +126,9 @@ class SerialWriter:
     def flush(self):
         """Sends stored data and remakes buffer."""
         buffer_val = self.buffer.getvalue()
-        self.comms.port.write(b"000START000" + self.identifier + b"\n"
-                              + buffer_val + b"000END000\n")
+        self.comms.port.write(id_and_bytes_as_packet(self.identifier, buffer_val))
+        # size = len(buffer_val)
+        # size_as_bytes = bytes([255]*(size//255) + [size % 255] + [0])
+        # self.comms.port.write(SOH + self.identifier + size_as_bytes
+        #                       + buffer_val + ETX + EOT)
         self.buffer = BytesIO()

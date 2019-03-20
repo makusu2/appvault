@@ -4,10 +4,40 @@ Serial communication functions for the Appvault client program.
 
 """
 
+#TODO open serial port instead of just using
+SOH = b'\x01'
+STX = b'\x02'
+ETX = b'\x03'
+EOT = b'\x04'
 
 import sys
 import serial
 from serial.tools import list_ports
+
+
+def id_and_bytes_as_packet(id, text):
+    if isinstance(id, str):
+        id = id.encode()
+    if isinstance(text, str):
+        text = text.encode()
+    assert len(id) == 3, f"ID: {id}"
+    size = len(text)
+    size_as_bytes = bytes([255]*(size//255) + [size % 255] + [0])
+    return SOH + id + size_as_bytes + text + ETX + EOT
+
+def read_id_and_bytes(port):
+    soh_bytes = port.read()
+    if not soh_bytes:
+        return None, None
+    assert soh_bytes == SOH, f"soh_bytes: {soh_bytes}"
+    identifier = port.read_until(size=3)
+    transmission_size = sum(port.read_until(bytes([0])))
+    task_bytes = port.read_until(size=transmission_size)
+    etx_bytes = port.read()
+    assert etx_bytes == ETX, f"Expected {ETX}: {etx_bytes}"
+    eot_bytes = port.read()
+    assert eot_bytes == EOT, f"Expected {EOT}: {eot_bytes}"
+    return identifier, task_bytes
 
 
 def get_selection(choices, query=None):
@@ -85,20 +115,9 @@ class Communicator:
         :class:`bytes`
             The encrypted version of the input bytes.
         """
-        encrypted_bytes = b""
-        self.port.write(b"000START000enr\n")
-        self.port.write(data)
-        self.port.write(b"\n000END000\n")
-        # TODO get a better way of finding start/end
-        next_line = self.port.readline()
-        if next_line == b"":
-            raise TimeoutError("Nothing received")
-        assert next_line == b"000START000enc\n", f"got {next_line}"
-        next_line = self.port.readline()
-        while not next_line.endswith(b"000END000\n"):
-            encrypted_bytes += next_line
-            next_line = self.port.readline()
-        encrypted_bytes += next_line.replace(b"000END000\n", b"")
+        self.port.write(id_and_bytes_as_packet(b"enr", data))
+        identifier, encrypted_bytes = read_id_and_bytes(self.port)
+        assert identifier == b"enc", f"Identifier was {identifier}"
         return encrypted_bytes
 
     def request_run(self, data: bytes):
@@ -124,33 +143,16 @@ class Communicator:
             The result of the executed program in bytes.
             Cast to bytes is performed by executing str(return_val).encode()
         """
-
-        self.port.write(b"000START000run\n")
-        self.port.write(data)
-        self.port.write(b"000END000\n")
+        self.port.write(id_and_bytes_as_packet(b"run", data))
         while True:
-            start_line = self.port.readline()
-            if start_line == b"000START000out\n":
-                next_line = self.port.readline()
-                while not next_line.endswith(b"000END000\n"):
-                    sys.stdout.write(next_line.decode())
-                    next_line = self.port.readline()
-                sys.stdout.write(next_line.decode().replace("000END000\n", ""))
-            elif start_line == b"000START000err\n":
-                next_line = self.port.readline()
-                while not next_line.endswith(b"000END000\n"):
-                    sys.stderr.write(next_line.decode())
-                    next_line = self.port.readline()
-                sys.stderr.write(next_line.decode().replace("000END000\n", ""))
-            elif start_line == b"000START000res\n":
-                result = ""
-                next_line = self.port.readline()
-                while not next_line.endswith(b"000END000\n"):
-                    result += next_line.decode()
-                    next_line = self.port.readline()
-                result += next_line.decode().replace("000END000\n", "")
-                return result
-            elif start_line == b"":
+            identifier, output_bytes = read_id_and_bytes(self.port)
+            if identifier == b"out":
+                sys.stdout.write(output_bytes.decode())
+            elif identifier == b"err":
+                sys.stderr.write(output_bytes.decode())
+            elif identifier == b"res":
+                return output_bytes.decode()
+            elif identifier is None:
                 raise TimeoutError("Nothing received")
             else:
-                raise ValueError(f"Start line was {start_line}")
+                raise ValueError(f"ID {identifier}, data {output_bytes}")
