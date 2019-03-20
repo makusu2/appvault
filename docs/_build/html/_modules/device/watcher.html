@@ -1,0 +1,249 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>device.watcher &mdash; Appvault 0.0.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: black" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> Appvault
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Appvault</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>device.watcher</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for device.watcher</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Main monitor methods for Appvault device; keep checking for new data and act</span>
+<span class="sd">Spinning cursor: https://stackoverflow.com/questions/4995733/</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">nacl.secret</span>
+<span class="kn">import</span> <span class="nn">nacl.utils</span>
+<span class="kn">import</span> <span class="nn">asteval</span>
+<span class="kn">from</span> <span class="nn">.communicator</span> <span class="k">import</span> <span class="n">Communicator</span><span class="p">,</span> <span class="n">SerialWriter</span>
+
+
+<span class="n">SPINNER</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">cycle</span><span class="p">(</span><span class="s2">&quot;-/|</span><span class="se">\\</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="Watcher"><a class="viewcode-back" href="../../index.html#device.Watcher">[docs]</a><span class="k">class</span> <span class="nc">Watcher</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="sa">b</span><span class="s1">&#39;0&#39;</span><span class="o">*</span><span class="mi">32</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">box</span> <span class="o">=</span> <span class="n">nacl</span><span class="o">.</span><span class="n">secret</span><span class="o">.</span><span class="n">SecretBox</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">comms</span> <span class="o">=</span> <span class="n">Communicator</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">serial_out</span> <span class="o">=</span> <span class="n">SerialWriter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comms</span><span class="p">,</span> <span class="sa">b</span><span class="s2">&quot;out&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">serial_err</span> <span class="o">=</span> <span class="n">SerialWriter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comms</span><span class="p">,</span> <span class="sa">b</span><span class="s2">&quot;err&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">serial_res</span> <span class="o">=</span> <span class="n">SerialWriter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comms</span><span class="p">,</span> <span class="sa">b</span><span class="s2">&quot;res&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">serial_enc</span> <span class="o">=</span> <span class="n">SerialWriter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comms</span><span class="p">,</span> <span class="sa">b</span><span class="s2">&quot;enc&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Watcher.run_and_send"><a class="viewcode-back" href="../../index.html#device.Watcher.run_and_send">[docs]</a>    <span class="k">def</span> <span class="nf">run_and_send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">encrypted_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Runs encrypted data and prints results to serial out/err/res.&quot;&quot;&quot;</span>
+        <span class="n">decrypted_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">box</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">encrypted_data</span><span class="p">)</span>
+        <span class="n">eval_interpreter</span> <span class="o">=</span> <span class="n">asteval</span><span class="o">.</span><span class="n">Interpreter</span><span class="p">(</span><span class="n">writer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">serial_out</span><span class="p">,</span>
+                                               <span class="n">err_writer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">serial_err</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">eval_interpreter</span><span class="p">(</span><span class="n">decrypted_data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">serial_res</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span>
+        <span class="k">for</span> <span class="n">gateway</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">serial_out</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">serial_err</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">serial_res</span><span class="p">]:</span>
+            <span class="n">gateway</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Watcher.encrypt_and_send"><a class="viewcode-back" href="../../index.html#device.Watcher.encrypt_and_send">[docs]</a>    <span class="k">def</span> <span class="nf">encrypt_and_send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Encrypts data and sends encrypted result over comms.&quot;&quot;&quot;</span>
+        <span class="n">encrypted_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">box</span><span class="o">.</span><span class="n">encrypt</span><span class="p">(</span><span class="n">program_data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">serial_enc</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">encrypted_data</span><span class="p">,</span> <span class="n">also_flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Watcher.keep_checking"><a class="viewcode-back" href="../../index.html#device.Watcher.keep_checking">[docs]</a>    <span class="k">def</span> <span class="nf">keep_checking</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Keep checking for new data and act accordingly.&quot;&quot;&quot;</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">SPINNER</span><span class="p">))</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">task_identifier</span><span class="p">,</span> <span class="n">task_bytes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comms</span><span class="o">.</span><span class="n">read_id_and_bytes</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">task_identifier</span> <span class="o">==</span> <span class="sa">b</span><span class="s2">&quot;enr&quot;</span><span class="p">:</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\b</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Got encryption request&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">encrypt_and_send</span><span class="p">(</span><span class="n">task_bytes</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Completed encryption request&quot;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">task_identifier</span> <span class="o">==</span> <span class="sa">b</span><span class="s2">&quot;run&quot;</span><span class="p">:</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\b</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Got run request&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">run_and_send</span><span class="p">(</span><span class="n">task_bytes</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Completed run request&quot;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">task_identifier</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="se">\b</span><span class="s2">{next(SPINNER)}&quot;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+                <span class="k">continue</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;task_identifier </span><span class="si">{task_identifier}</span><span class="s2"> not &quot;</span>
+                                 <span class="s2">&quot;one of [&#39;enr&#39;, &#39;run&#39;]&quot;</span><span class="p">)</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, maku
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
