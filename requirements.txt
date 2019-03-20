@@ -1,2 +1,2 @@
 pyserial>=3.4
-sphinx_rtd_theme>=3.4
+sphinx_rtd_theme>=0.4.3
