@@ -20,21 +20,6 @@ def as_packet(id, text):
     return SOH + id + size_as_bytes + text + ETX + EOT
 
 
-def read_id_and_bytes(port):
-    soh_bytes = port.read()
-    if not soh_bytes:
-        return None, None
-    assert soh_bytes == SOH, f"soh_bytes: {soh_bytes}"
-    identifier = port.read_until(size=3)
-    transmission_size = sum(port.read_until(bytes([0])))
-    task_bytes = port.read_until(size=transmission_size)
-    etx_bytes = port.read()
-    assert etx_bytes == ETX, f"Expected {ETX}: {etx_bytes}"
-    eot_bytes = port.read()
-    assert eot_bytes == EOT, f"Expected {EOT}: {eot_bytes}"
-    return identifier, task_bytes
-
-
 def get_selection(choices, query):
     """Request user input to choose from a collection of choices.
     If len(choices) == 1, the single choice is returned.
@@ -93,13 +78,25 @@ class Communicator:
     def __init__(self, port=None):
         self.port = port or get_comport()
 
-    def recv_task(self):
+    def read_id_and_bytes(self):
         """Returns a tuple of (identifier, task_bytes)"""
-        return read_id_and_bytes(self.port)
+        soh_bytes = self.port.read()
+        if not soh_bytes:
+            return None, None
+        assert soh_bytes == SOH, f"soh_bytes: {soh_bytes}"
+        identifier = self.port.read_until(size=3)
+        transmission_size = sum(self.port.read_until(bytes([0])))
+        task_bytes = self.port.read_until(size=transmission_size)
+        etx_bytes = self.port.read()
+        assert etx_bytes == ETX, f"Expected {ETX}: {etx_bytes}"
+        eot_bytes = self.port.read()
+        assert eot_bytes == EOT, f"Expected {EOT}: {eot_bytes}"
+        return identifier, task_bytes
 
 
 class SerialWriter:
-    """Represents the serial capture writers for stdout, stderr, and result
+    """Represents the serial capture writers.
+    Best used for stdout, stderr, and result, but works for any identifier.
 
     Attributes
     -----------
@@ -109,18 +106,20 @@ class SerialWriter:
         The buffer in which written bytes are stored until flush.
         This is remade after each flush so do not save it in a variable.
     identifier: :class:`str`
-        The identifier for the data. Should be one of ['out', 'err', 'res'].
+        The identifier for the data. Should be one of length 3.
     """
     def __init__(self, comms, identifier):
         self.comms = comms
         self.buffer = BytesIO()
         self.identifier = identifier
 
-    def write(self, msg):
+    def write(self, msg, also_flush = False):
         """Write capture method. Adds to current buffer."""
         if isinstance(msg, str):
             msg = msg.encode()
         self.buffer.write(msg)
+        if also_flush:
+            self.flush()
 
     def flush(self):
         """Sends stored data and remakes buffer."""

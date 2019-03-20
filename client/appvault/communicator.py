@@ -25,21 +25,6 @@ def as_packet(id, text):
     return SOH + id + size_as_bytes + text + ETX + EOT
 
 
-def read_id_and_bytes(port):
-    soh_bytes = port.read()
-    if not soh_bytes:
-        return None, None
-    assert soh_bytes == SOH, f"soh_bytes: {soh_bytes}"
-    identifier = port.read_until(size=3)
-    transmission_size = sum(port.read_until(bytes([0])))
-    task_bytes = port.read_until(size=transmission_size)
-    etx_bytes = port.read()
-    assert etx_bytes == ETX, f"Expected {ETX}: {etx_bytes}"
-    eot_bytes = port.read()
-    assert eot_bytes == EOT, f"Expected {EOT}: {eot_bytes}"
-    return identifier, task_bytes
-
-
 def get_selection(choices, query=None):
     """Request user input to choose from a collection of choices.
     If len(choices) == 1, the single choice is returned.
@@ -103,6 +88,21 @@ class Communicator:
     def __init__(self, port=None):
         self.port = port or get_comport()
 
+    def read_id_and_bytes(self):
+        """Returns a tuple of (identifier, task_bytes)"""
+        soh_bytes = self.port.read()
+        if not soh_bytes:
+            return None, None
+        assert soh_bytes == SOH, f"soh_bytes: {soh_bytes}"
+        identifier = self.port.read_until(size=3)
+        transmission_size = sum(self.port.read_until(bytes([0])))
+        task_bytes = self.port.read_until(size=transmission_size)
+        etx_bytes = self.port.read()
+        assert etx_bytes == ETX, f"Expected {ETX}: {etx_bytes}"
+        eot_bytes = self.port.read()
+        assert eot_bytes == EOT, f"Expected {EOT}: {eot_bytes}"
+        return identifier, task_bytes
+
     def request_encryption_bytes(self, data: bytes):
         """Sends data to be encrypted on the external device.
 
@@ -123,7 +123,7 @@ class Communicator:
             The encrypted version of the input bytes.
         """
         self.port.write(as_packet(b"enr", data))
-        identifier, encrypted_bytes = read_id_and_bytes(self.port)
+        identifier, encrypted_bytes = self.read_id_and_bytes()
         assert identifier == b"enc", f"Identifier was {identifier}"
         return encrypted_bytes
 
@@ -152,7 +152,7 @@ class Communicator:
         """
         self.port.write(as_packet(b"run", data))
         while True:
-            identifier, output_bytes = read_id_and_bytes(self.port)
+            identifier, output_bytes = self.read_id_and_bytes()
             if identifier == b"out":
                 sys.stdout.write(output_bytes.decode())
             elif identifier == b"err":
