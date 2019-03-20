@@ -2,7 +2,7 @@
 
 """
 Appvault Client Module
-~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A client program to use with an Appvault device
 

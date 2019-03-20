@@ -2,7 +2,7 @@
 
 """
 Appvault Device Module
-~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A proof-of-concept code for running on an external Python device (Raspberry pi)
 
