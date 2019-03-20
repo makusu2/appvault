@@ -9,8 +9,7 @@ import itertools
 import nacl.secret
 import nacl.utils
 import asteval
-from .communicator import (Communicator, SerialWriter,
-                           as_packet, read_id_and_bytes)
+from .communicator import Communicator, SerialWriter, as_packet
 
 
 SPINNER = itertools.cycle("-/|\\")

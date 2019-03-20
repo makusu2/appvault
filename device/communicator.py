@@ -1,9 +1,8 @@
 from io import BytesIO
-import re
 import serial
 from serial.tools import list_ports
 
-#TODO open serial port instead of just using
+
 SOH = b'\x01'
 STX = b'\x02'
 ETX = b'\x03'
@@ -20,6 +19,7 @@ def as_packet(id, text):
     size_as_bytes = bytes([255]*(size//255) + [size % 255] + [0])
     return SOH + id + size_as_bytes + text + ETX + EOT
 
+
 def read_id_and_bytes(port):
     soh_bytes = port.read()
     if not soh_bytes:
@@ -33,11 +33,6 @@ def read_id_and_bytes(port):
     eot_bytes = port.read()
     assert eot_bytes == EOT, f"Expected {EOT}: {eot_bytes}"
     return identifier, task_bytes
-
-
-
-
-#print(b"\n\n\n"+as_packet("enr", "Helo there General Kenobi")+b"\n\n\n")
 
 
 def get_selection(choices, query):

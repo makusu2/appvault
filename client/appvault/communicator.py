@@ -3,16 +3,15 @@
 Serial communication functions for the Appvault client program.
 
 """
+import sys
+import serial
+from serial.tools import list_ports
 
-#TODO open serial port instead of just using
+
 SOH = b'\x01'
 STX = b'\x02'
 ETX = b'\x03'
 EOT = b'\x04'
-
-import sys
-import serial
-from serial.tools import list_ports
 
 
 def as_packet(id, text):
@@ -24,6 +23,7 @@ def as_packet(id, text):
     size = len(text)
     size_as_bytes = bytes([255]*(size//255) + [size % 255] + [0])
     return SOH + id + size_as_bytes + text + ETX + EOT
+
 
 def read_id_and_bytes(port):
     soh_bytes = port.read()
