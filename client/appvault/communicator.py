@@ -3,6 +3,7 @@
 Serial communication functions for the Appvault client program.
 
 """
+from io import BytesIO
 import sys
 import serial
 from serial.tools import list_ports
@@ -103,29 +104,29 @@ class Communicator:
         assert eot_bytes == EOT, f"Expected {EOT}: {eot_bytes}"
         return identifier, task_bytes
 
-    def request_encryption_bytes(self, data: bytes):
-        """Sends data to be encrypted on the external device.
-
-        Parameters
-        ----------
-        data: :class:`bytes`
-            The data to be encrypted.
-
-        Raises
-        -------
-        TimeoutError
-            More data was expected in response from the device but not
-            received in time.
-
-        Returns
-        --------
-        :class:`bytes`
-            The encrypted version of the input bytes.
-        """
-        self.port.write(as_packet(b"enr", data))
-        identifier, encrypted_bytes = self.read_id_and_bytes()
-        assert identifier == b"enc", f"Identifier was {identifier}"
-        return encrypted_bytes
+    # def request_encryption_bytes(self, data: bytes):
+    #     """Sends data to be encrypted on the external device.
+    #
+    #     Parameters
+    #     ----------
+    #     data: :class:`bytes`
+    #         The data to be encrypted.
+    #
+    #     Raises
+    #     -------
+    #     TimeoutError
+    #         More data was expected in response from the device but not
+    #         received in time.
+    #
+    #     Returns
+    #     --------
+    #     :class:`bytes`
+    #         The encrypted version of the input bytes.
+    #     """
+    #     self.port.write(as_packet(b"enr", data))
+    #     identifier, encrypted_bytes = self.read_id_and_bytes()
+    #     assert identifier == b"enc", f"Identifier was {identifier}"
+    #     return encrypted_bytes
 
     def request_run(self, data: bytes):
         """Sends encrypted serial data to be executed on the external device.
@@ -163,3 +164,36 @@ class Communicator:
                 raise TimeoutError("Nothing received")
             else:
                 raise ValueError(f"ID {identifier}, data {output_bytes}")
+
+class SerialWriter:
+    """Represents the serial capture writers.
+    Best used for stdout, stderr, and result, but works for any identifier.
+
+    Attributes
+    -----------
+    comms: :class:`Communicator`
+        The serial communicator for data transmissions
+    buffer: :class:`BytesIO`
+        The buffer in which written bytes are stored until flush.
+        This is remade after each flush so do not save it in a variable.
+    identifier: :class:`str`
+        The identifier for the data. Should be one of length 3.
+    """
+    def __init__(self, comms, identifier):
+        self.comms = comms
+        self.buffer = BytesIO()
+        self.identifier = identifier
+
+    def write(self, msg, also_flush = False):
+        """Write capture method. Adds to current buffer."""
+        if isinstance(msg, str):
+            msg = msg.encode()
+        self.buffer.write(msg)
+        if also_flush:
+            self.flush()
+
+    def flush(self):
+        """Sends stored data and remakes buffer."""
+        buffer_val = self.buffer.getvalue()
+        self.comms.port.write(as_packet(self.identifier, buffer_val))
+        self.buffer = BytesIO()
