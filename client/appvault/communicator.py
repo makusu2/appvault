@@ -128,42 +128,42 @@ class Communicator:
     #     assert identifier == b"enc", f"Identifier was {identifier}"
     #     return encrypted_bytes
 
-    def request_run(self, data: bytes):
-        """Sends encrypted serial data to be executed on the external device.
-
-        Parameters
-        ----------
-        data: :class:`bytes`
-            The encrypted data to be run.
-
-        Raises
-        -------
-        TimeoutError
-            More data was expected in response from the device but not
-            received in time.
-        ValueError
-            Part of the response from the device does not match expected
-            response.
-
-        Returns
-        --------
-        :class:`bytes`
-            The result of the executed program in bytes.
-            Cast to bytes is performed by executing str(return_val).encode()
-        """
-        self.port.write(as_packet(b"run", data))
-        while True:
-            identifier, output_bytes = self.read_id_and_bytes()
-            if identifier == b"out":
-                sys.stdout.write(output_bytes.decode())
-            elif identifier == b"err":
-                sys.stderr.write(output_bytes.decode())
-            elif identifier == b"res":
-                return output_bytes.decode()
-            elif identifier is None:
-                raise TimeoutError("Nothing received")
-            else:
-                raise ValueError(f"ID {identifier}, data {output_bytes}")
+    # def request_run(self, data: bytes):
+    #     """Sends encrypted serial data to be executed on the external device.
+    #
+    #     Parameters
+    #     ----------
+    #     data: :class:`bytes`
+    #         The encrypted data to be run.
+    #
+    #     Raises
+    #     -------
+    #     TimeoutError
+    #         More data was expected in response from the device but not
+    #         received in time.
+    #     ValueError
+    #         Part of the response from the device does not match expected
+    #         response.
+    #
+    #     Returns
+    #     --------
+    #     :class:`bytes`
+    #         The result of the executed program in bytes.
+    #         Cast to bytes is performed by executing str(return_val).encode()
+    #     """
+    #     self.port.write(as_packet(b"run", data))
+    #     while True:
+    #         identifier, output_bytes = self.read_id_and_bytes()
+    #         if identifier == b"out":
+    #             sys.stdout.write(output_bytes.decode())
+    #         elif identifier == b"err":
+    #             sys.stderr.write(output_bytes.decode())
+    #         elif identifier == b"res":
+    #             return output_bytes.decode()
+    #         elif identifier is None:
+    #             raise TimeoutError("Nothing received")
+    #         else:
+    #             raise ValueError(f"ID {identifier}, data {output_bytes}")
 
 class SerialWriter:
     """Represents the serial capture writers.

@@ -19,6 +19,11 @@ def encrypt(infile, outfile, comms=None):
         The Communicator to use when transferring and receiving data.
         Defaults to user input.
 
+    Raises
+    -------
+    TimeoutError
+        More data was expected in response from the device but not
+        received in time.
     """
     comms = Communicator() if comms is None else comms
     with open(infile, "rb") as infile_open, \
