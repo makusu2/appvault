@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+"""
+Serial communication functions for the Appvault.
+This file should be EXACTLY the same for communicator.py in client and device.
+"""
 from io import BytesIO
 import serial
 from serial.tools import list_ports
@@ -20,7 +25,7 @@ def as_packet(id, text):
     return SOH + id + size_as_bytes + text + ETX + EOT
 
 
-def get_selection(choices, query):
+def get_selection(choices, query=None):
     """Request user input to choose from a collection of choices.
     If len(choices) == 1, the single choice is returned.
 
@@ -31,6 +36,10 @@ def get_selection(choices, query):
     query: :class:`str`
         The prompt displayed to the user. Defaults to "Please select one."
     """
+
+    if len(choices) == 1:
+        return choices[0]
+    query = "Please select one." if query is None else query
     choices_lower = [choice.lower() for choice in choices]
     print(f"{query}\n{choices}")
     response = input()
@@ -75,6 +84,7 @@ class Communicator:
         The serial port over which to communicate.
 
     """
+
     def __init__(self, port=None):
         self.port = port or get_comport()
 
@@ -113,7 +123,7 @@ class SerialWriter:
         self.buffer = BytesIO()
         self.identifier = identifier
 
-    def write(self, msg, also_flush = False):
+    def write(self, msg, also_flush=False):
         """Write capture method. Adds to current buffer."""
         if isinstance(msg, str):
             msg = msg.encode()

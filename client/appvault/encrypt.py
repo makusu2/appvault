@@ -32,5 +32,4 @@ def encrypt(infile, outfile, comms=None):
         SerialWriter(comms, b"enr").write(unencrypted_data, also_flush=True)
         id, encrypted_bytes = comms.read_id_and_bytes()
         assert id == b"enc", f"ID: {id}"
-        #encrypted_bytes = comms.request_encryption_bytes(unencrypted_data)
         outfile_open.write(encrypted_bytes)

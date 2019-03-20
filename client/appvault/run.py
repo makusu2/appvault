@@ -17,7 +17,7 @@ def run(infile, comms=None, return_result=False):
         Defaults to user input.
     return_result: Optional[:class:`bool`]
         If ``True``, return the result of the program, else print the result.
-        
+
     Raises
     -------
     TimeoutError
@@ -46,8 +46,6 @@ def run(infile, comms=None, return_result=False):
                 raise TimeoutError("Nothing received")
             else:
                 raise ValueError(f"ID {identifier}, data {output_bytes}")
-
-        #result = comms.request_run(encrypted_data)
         if return_result:
             return result
         print(f"Result: {result}")

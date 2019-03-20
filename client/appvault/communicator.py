@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Serial communication functions for the Appvault client program.
-
+Serial communication functions for the Appvault.
+This file should be EXACTLY the same for communicator.py in client and device.
 """
 from io import BytesIO
-import sys
 import serial
 from serial.tools import list_ports
 
@@ -104,66 +103,6 @@ class Communicator:
         assert eot_bytes == EOT, f"Expected {EOT}: {eot_bytes}"
         return identifier, task_bytes
 
-    # def request_encryption_bytes(self, data: bytes):
-    #     """Sends data to be encrypted on the external device.
-    #
-    #     Parameters
-    #     ----------
-    #     data: :class:`bytes`
-    #         The data to be encrypted.
-    #
-    #     Raises
-    #     -------
-    #     TimeoutError
-    #         More data was expected in response from the device but not
-    #         received in time.
-    #
-    #     Returns
-    #     --------
-    #     :class:`bytes`
-    #         The encrypted version of the input bytes.
-    #     """
-    #     self.port.write(as_packet(b"enr", data))
-    #     identifier, encrypted_bytes = self.read_id_and_bytes()
-    #     assert identifier == b"enc", f"Identifier was {identifier}"
-    #     return encrypted_bytes
-
-    # def request_run(self, data: bytes):
-    #     """Sends encrypted serial data to be executed on the external device.
-    #
-    #     Parameters
-    #     ----------
-    #     data: :class:`bytes`
-    #         The encrypted data to be run.
-    #
-    #     Raises
-    #     -------
-    #     TimeoutError
-    #         More data was expected in response from the device but not
-    #         received in time.
-    #     ValueError
-    #         Part of the response from the device does not match expected
-    #         response.
-    #
-    #     Returns
-    #     --------
-    #     :class:`bytes`
-    #         The result of the executed program in bytes.
-    #         Cast to bytes is performed by executing str(return_val).encode()
-    #     """
-    #     self.port.write(as_packet(b"run", data))
-    #     while True:
-    #         identifier, output_bytes = self.read_id_and_bytes()
-    #         if identifier == b"out":
-    #             sys.stdout.write(output_bytes.decode())
-    #         elif identifier == b"err":
-    #             sys.stderr.write(output_bytes.decode())
-    #         elif identifier == b"res":
-    #             return output_bytes.decode()
-    #         elif identifier is None:
-    #             raise TimeoutError("Nothing received")
-    #         else:
-    #             raise ValueError(f"ID {identifier}, data {output_bytes}")
 
 class SerialWriter:
     """Represents the serial capture writers.
@@ -184,7 +123,7 @@ class SerialWriter:
         self.buffer = BytesIO()
         self.identifier = identifier
 
-    def write(self, msg, also_flush = False):
+    def write(self, msg, also_flush=False):
         """Write capture method. Adds to current buffer."""
         if isinstance(msg, str):
             msg = msg.encode()
