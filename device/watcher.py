@@ -33,13 +33,11 @@ class Watcher:
         for gateway in [self.serial_out, self.serial_err, self.serial_res]:
             gateway.flush()
 
-
     def encrypt_and_send(self, program_data):
         """Encrypts data and sends encrypted result over comms."""
         encrypted_data = self.box.encrypt(program_data)
         self.comms.port.write(b"000START000enc\n" + encrypted_data
                               + b"000END000\n")
-
 
     def keep_checking(self):
         """Keep checking for new data and act accordingly."""

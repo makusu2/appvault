@@ -58,7 +58,6 @@ class Communicator:
     def __init__(self, port=None):
         self.port = port or get_comport()
 
-
     def recv_task(self):
         """Returns a tuple of (task_bytes, identifier)"""
         start_line = self.port.readline()
